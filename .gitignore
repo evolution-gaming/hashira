@@ -4,3 +4,5 @@
 # sbt
 target/
 .bsp/
+
+.claude/
