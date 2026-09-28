@@ -10,6 +10,8 @@ ThisBuild / scalaVersion := crossScalaVersions.value.head
 addCommandAlias("fmt", "+all scalafmtRepo")
 addCommandAlias("build", "+all scalafmtCheckRepo Compile/doc test")
 
+// TODO: WIP add module descriptions
+
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq(
     "-release:17",
@@ -51,7 +53,7 @@ lazy val commonSettings = Seq(
 lazy val root = project
   .in(file("."))
   .settings(
-    name := "root",
+    name := "hashira",
     publish / skip := true,
   )
   .aggregate(

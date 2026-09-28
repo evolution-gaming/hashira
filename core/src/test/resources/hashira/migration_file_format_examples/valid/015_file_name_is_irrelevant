@@ -1,0 +1,9 @@
+-- description: creates api_keys table
+-- authoredAt: 1370028266
+-- up:
+
+CREATE TABLE api_keys (id uuid PRIMARY KEY, secret text)
+
+-- down:
+
+DROP TABLE api_keys
