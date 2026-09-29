@@ -13,10 +13,14 @@ import scala.util.Try
  *
  * Stateful, non-threadsafe.
  *
+ * @param fileRef
+ *   string indicating the origin of the file, e.g. file path on the file system; used for
+ *   error reporting
  * @param linesIt
  *   file lines iterator
  */
 private[hashira] final class MigrationFileParserImpl(
+  fileRef: String,
   linesIt: Iterator[String],
 ) {
   import MigrationFileParserImpl.*
@@ -53,6 +57,7 @@ private[hashira] final class MigrationFileParserImpl(
 
     if (errors.nonEmpty) {
       throw MigrationFileInvalidException(
+        fileRef = fileRef,
         // sort by line for nicer representation, file errors go first
         errors = errors.to(ArraySeq).sortBy(_.lineNum.getOrElse(0)),
       )
@@ -491,5 +496,3 @@ private object MigrationFileParserImpl {
     line.stripLeading().startsWith("-- ")
   }
 }
-
-// TODO: WIP SRW The file loader must name the file in errors, and strip a BOM - ?

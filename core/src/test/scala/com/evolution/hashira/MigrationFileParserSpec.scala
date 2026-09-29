@@ -8,7 +8,8 @@ class MigrationFileParserSpec extends BaseUnitSpec {
       "valid" - {
         ValidFileExamples.foreach { example =>
           example.name in {
-            parse(example.readFile()) shouldEqual example.expected
+            val filePath = example.readFilePath()
+            MigrationFileParser.parse(filePath) shouldEqual example.expected
           }
         }
       }
@@ -17,10 +18,16 @@ class MigrationFileParserSpec extends BaseUnitSpec {
         InvalidFileExamples.foreach { example =>
           example.name in {
             val fileContent = example.readFile()
+            val fileRef = fileContent.rawFilePath.toString
 
             val exception = interceptOnly[MigrationFileInvalidException] {
-              parse(fileContent.contentToParse)
+              MigrationFileParser.parse(
+                fileRef = fileRef,
+                fileContent = fileContent.contentToParse,
+              )
             }
+
+            exception.fileRef shouldEqual fileRef
 
             // this also verifies that the errors are reported in the file order:
             // - file-level errors coming first
@@ -31,9 +38,5 @@ class MigrationFileParserSpec extends BaseUnitSpec {
         }
       }
     }
-  }
-
-  private def parse(fileContent: String): Migration = {
-    MigrationFileParser.parse(fileContent)
   }
 }

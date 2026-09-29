@@ -9,6 +9,8 @@ import scala.collection.mutable
  * Example: a folder with migration files designates a migration set, with each migration
  * file denoting a migration.
  *
+ * Use [[MigrationSetLoader]] to load one from classpath or a file directory.
+ *
  * Element identity: all migrations in a set have unique [[MigrationId]].
  *
  * Ordering: this set defines the migration execution order, which is
