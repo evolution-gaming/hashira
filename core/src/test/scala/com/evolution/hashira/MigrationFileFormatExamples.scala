@@ -29,19 +29,12 @@ object MigrationFileFormatExamples {
     Paths.get(url.toURI)
   }
 
-  private def readFileExample(subPath: String): String = {
-    Files.readString(
-      getRequiredTestResourcePath(subPath),
-      StandardCharsets.UTF_8,
-    )
-  }
-
   sealed trait FileExample {
     def name: String
 
     protected def subDir: String
 
-    protected final def readRawFile(): String = readFileExample(subPath = s"$subDir/$name")
+    protected final def readRawFilePath(): Path = getRequiredTestResourcePath(s"$subDir/$name")
   }
 
   final case class ValidFileExample(
@@ -50,7 +43,7 @@ object MigrationFileFormatExamples {
   ) extends FileExample {
     override protected def subDir: String = "valid"
 
-    def readFile(): String = readRawFile()
+    def readFilePath(): Path = readRawFilePath()
   }
 
   /**
@@ -67,7 +60,8 @@ object MigrationFileFormatExamples {
     override protected def subDir: String = InvalidFileExample.subDir
 
     def readFile(): InvalidFileExample.Content = {
-      val rawFileStr = readRawFile()
+      val rawFilePath = readRawFilePath()
+      val rawFileStr = Files.readString(rawFilePath, StandardCharsets.UTF_8)
 
       // preserve original separators, just in case
       val contentToParse = rawFileStr.linesWithSeparators
@@ -75,6 +69,7 @@ object MigrationFileFormatExamples {
         .mkString("")
 
       InvalidFileExample.Content(
+        rawFilePath = rawFilePath,
         contentToParse = contentToParse,
         expectedErrors = extractErrors(rawFileStr),
       )
@@ -111,6 +106,7 @@ object MigrationFileFormatExamples {
     private val subDir: String = "invalid"
 
     final case class Content(
+      rawFilePath: Path,
       contentToParse: String,
       expectedErrors: ArraySeq[MigrationFileFormatError],
     )

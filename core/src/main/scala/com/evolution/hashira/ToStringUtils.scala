@@ -6,11 +6,11 @@ package com.evolution.hashira
 private[hashira] object ToStringUtils {
 
   /**
-   * Formats a potentially multi-line string into a quoted single-line representation,
-   * which is both human-readable and reversible.
+   * Formats a potentially multi-line string as a quoted single line, which is both
+   * human-readable and reversible.
    */
   def fmtMultilineEscaped(str: String): String = {
-    // the JSON escaping logic, for simplicity - the goal is to have a readable, but reversible,
+    // JSON string escaping, for simplicity - the goal is to have a readable, but reversible,
     // single-line representation
 
     val builder = new StringBuilder(str.length + 16) // slight buffer for escaping and quotes
@@ -44,5 +44,15 @@ private[hashira] object ToStringUtils {
     builder += '"'
 
     builder.toString()
+  }
+
+  /**
+   * Formats a non-empty migration ID set, sorted by `authoredAt` for better readability.
+   *
+   * The implementation doesn't fail on empty inputs but the resulting string doesn't look
+   * nice.
+   */
+  def fmtNonEmptyIdSet(ids: Set[MigrationId]): String = {
+    s"${ ids.toVector.sortBy(_.authoredAt).mkString(", ") }"
   }
 }

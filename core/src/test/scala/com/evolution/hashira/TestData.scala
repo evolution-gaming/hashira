@@ -31,4 +31,16 @@ object TestData {
       upStatements = ArraySeq.from(up),
     )
   }
+
+  def mkPlan(
+    rollback: IterableOnce[Migration.Reversible] = Vector.empty,
+    apply: IterableOnce[Migration] = Vector.empty,
+    ignoredMissing: IterableOnce[MigrationId] = Vector.empty,
+  ): MigrationPlan = {
+    MigrationPlan(
+      migrationsToRollback = ArraySeq.from(rollback),
+      migrationsToApply = ArraySeq.from(apply),
+      ignoredMissingMigrations = Set.from(ignoredMissing),
+    )
+  }
 }

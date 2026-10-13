@@ -10,8 +10,6 @@ ThisBuild / scalaVersion := crossScalaVersions.value.head
 addCommandAlias("fmt", "+all scalafmtRepo")
 addCommandAlias("build", "+all scalafmtCheckRepo Compile/doc test")
 
-// TODO: WIP add module descriptions
-
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq(
     "-release:17",
@@ -47,6 +45,7 @@ lazy val commonSettings = Seq(
     ScalaTest.scalaCheck % Test,
     Slf4j.simple % Test,
     commonsText % Test,
+    commonsIo % Test,
   ),
 )
 
@@ -58,25 +57,55 @@ lazy val root = project
   )
   .aggregate(
     core,
+    cassandraDriverSupportTck,
     cassandraDriver3,
     cassandraDriver4,
   )
 
 lazy val core = project
-  .in(file("core"))
+  .configure(asPublishedModule(
+    name = "core",
+    description = "core types and utilities",
+  ))
+  // -- to autogenerate config data classes like MigratorParams
+  .enablePlugins(ConfigClassGenPlugin)
   .settings(
-    commonSettings,
-    name := "hashira-core",
+    configClassGenPackage := "com.evolution.hashira",
+  )
+  // --
+  .settings(
+    libraryDependencies ++= Seq(
+      classgraph,
+      typesafeConfig,
+    ),
+  )
+
+lazy val cassandraDriverSupportTck = project
+  .configure(asPublishedModule(
+    name = "cassandra-driver-support-tck",
+    description = "Cassandra driver support TCK",
+  ))
+  .dependsOn(
+    core,
+  )
+  .settings(
+    libraryDependencies ++= Seq(
+      ScalaTest.all,
+      testcontainersCassandra,
+    ),
   )
 
 lazy val cassandraDriver3 = project
-  .in(file("cassandra-driver3"))
+  .configure(asPublishedModule(
+    name = "cassandra-driver3",
+    description = "Cassandra driver v3 support",
+  ))
   .settings(
-    commonSettings,
-    name := "hashira-cassandra-driver3",
+    Test / fork := true, // fork the JVM on test due to using testcontainers here
   )
   .dependsOn(
     core,
+    cassandraDriverSupportTck % Test,
   )
   .settings(
     libraryDependencies ++= Seq(
@@ -85,13 +114,16 @@ lazy val cassandraDriver3 = project
   )
 
 lazy val cassandraDriver4 = project
-  .in(file("cassandra-driver4"))
+  .configure(asPublishedModule(
+    name = "cassandra-driver4",
+    description = "Cassandra driver v4 support",
+  ))
   .settings(
-    commonSettings,
-    name := "hashira-cassandra-driver4",
+    Test / fork := true, // fork the JVM on test due to using testcontainers here
   )
   .dependsOn(
     core,
+    cassandraDriverSupportTck % Test,
   )
   .settings(
     libraryDependencies ++= Seq(
@@ -104,4 +136,18 @@ def crossSettings[T](scalaVersion: String, if3: T, if2: T): T = {
     case version if version.startsWith("3") => if3
     case _ => if2
   }
+}
+
+def asPublishedModule(
+  name: String,
+  description: String,
+)(
+  p: Project,
+): Project = {
+  p.in(file(name))
+    .settings(
+      commonSettings,
+      Keys.name := name,
+      Keys.description := s"Hashira Cassandra migration tool - $description",
+    )
 }

@@ -22,6 +22,8 @@ object Dependencies {
 
   lazy val commonsText = "org.apache.commons" % "commons-text" % "1.15.0"
 
+  lazy val commonsIo = "commons-io" % "commons-io" % "2.22.0"
+
   lazy val cassandraDriverV3 = "com.datastax.cassandra" % "cassandra-driver-core" % "3.11.5"
 
   object CassandraDriverV4 {
@@ -29,4 +31,13 @@ object Dependencies {
 
     val core = "org.apache.cassandra" % "java-driver-core" % v
   }
+
+  lazy val classgraph = "io.github.classgraph" % "classgraph" % "4.8.196"
+
+  lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
+
+  lazy val testcontainersCassandra = ("org.testcontainers" % "testcontainers-cassandra" % "2.0.5")
+    // the driver is used only by the deprecated org.testcontainers.containers.CassandraContainer,
+    // excluding it to keep driver 3 classes off the classpath of the tests for other drivers
+    .exclude("com.datastax.cassandra", "cassandra-driver-core")
 }
