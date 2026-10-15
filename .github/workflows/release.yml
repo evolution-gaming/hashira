@@ -2,7 +2,8 @@ name: release
 
 on:
   push:
-    tags: [ "v*" ]
+    # only version tags like v1.2.3 or v1.2.3-RC1, sbt-dynver ignores other tags and would produce a SNAPSHOT version
+    tags: [ "v[0-9]+.[0-9]+.[0-9]+*" ]
 
 # deleting the release tag and creating the GitHub release both need write access
 permissions:
@@ -17,20 +18,29 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # protection rules and secrets for publishing are set up on this environment in the repo settings
+    environment: release
     # a timed out job is cancelled, which deletes the release tag, instead of hanging for the default 6 hours
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Fetch all history for all branches and tags - just in case it's all necessary for ci-release.
           # Tags are needed for versionPolicyCheck binary and source compat checks.
           fetch-depth: 0
-      - uses: coursier/cache-action@95e5b1029b6b86e7bac033ee44a0697d8a527d2d # v8.1.1
+          # don't keep GITHUB_TOKEN for the later steps, the sbt build, its plugins and tests could read it
+          persist-credentials: false
+      - name: check that the tag is on main
+        run: |
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::release tag must point to a commit on main"
+            exit 1
+          fi
+      # no dependency caches: other workflow runs write them, and a tampered cache would end up in the published artifacts
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           java-version-file: .java-version
           distribution: temurin
-          cache: sbt
       - uses: sbt/setup-sbt@ecad189dd245444b9ae0a0cd5922fd938b88906f # v1.5.12
       # sbt ci-release doesn't verify the build, need to do it explicitly
       - name: sbt build
@@ -42,9 +52,13 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
 
+      # through the API, because checkout doesn't persist the credentials git push would need
       - name: delete release tag if failed
         if: failure() || cancelled()
-        run: git push --delete origin ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag"
 
       - name: publish release notes
         if: success()
