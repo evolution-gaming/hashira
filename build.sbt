@@ -4,11 +4,19 @@ import sbt.Keys.*
 
 ThisBuild / organization := "com.evolution.hashira"
 
+// if changing binary Scala versions here, change in the ci.yml action as well
 ThisBuild / crossScalaVersions := Seq(scala213Version, scala33Version)
 ThisBuild / scalaVersion := crossScalaVersions.value.head
 
+// DO NOT CHANGE THIS SETTING UNLESS YOU FULLY UNDERSTAND THE CONSEQUENCES!
+//
+// WARNING: BinaryCompatible is used instead of BinaryAndSourceCompatible because BinaryAndSourceCompatible fails
+// on new methods added to objects, which doesn't really break neither source, nor binary compatibility.
+// So the source compatibility should be guaranteed manually.
+ThisBuild / versionPolicyIntention := Compatibility.BinaryCompatible
+
 addCommandAlias("fmt", "+all scalafmtRepo")
-addCommandAlias("build", "+all scalafmtCheckRepo Compile/doc test")
+addCommandAlias("build", "+all scalafmtCheckRepo versionPolicyCheck Compile/doc test")
 
 lazy val commonSettings = Seq(
   scalacOptions ++= Seq(
