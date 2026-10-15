@@ -9,9 +9,20 @@ permissions:
   contents: read
 
 jobs:
+  # the reusable workflow takes only a version string, so read it from .java-version shared with release.yml
+  java-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: read
+        run: echo "version=$(cat .java-version)" >> "$GITHUB_OUTPUT"
+
   ci-build:
+    needs: java-version
     uses: evolution-gaming/scala-github-actions/.github/workflows/ci.yml@999c04ccae0d79a8a0c12ed7d71136762b2ae8c1 # v7.1.0
     with:
       # if changing binary Scala versions here, change in the build.sbt as well
       scala_versions: '["2.13.x", "3.x"]'
-      java_version: 17
+      java_version: ${{ needs.java-version.outputs.version }}
