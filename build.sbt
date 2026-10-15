@@ -4,6 +4,28 @@ import sbt.Keys.*
 
 ThisBuild / organization := "com.evolution.hashira"
 
+ThisBuild / startYear := Some(2026)
+ThisBuild / homepage := Some(url("https://github.com/evolution-gaming/hashira"))
+ThisBuild / licenses := Seq(("MIT", url("https://opensource.org/licenses/MIT")))
+
+ThisBuild / organizationName := "Evolution"
+ThisBuild / organizationHomepage := Some(url("https://evolution.com"))
+
+// Maven Central requires <developers> in published pom.xml files
+ThisBuild / developers := List(
+  Developer(
+    id = "migesok",
+    name = "Mikhail Sokolov",
+    email = "mikhail.g.sokolov@gmail.com",
+    url = url("https://github.com/migesok"),
+  ),
+)
+
+ThisBuild / scmInfo := Some(ScmInfo(
+  browseUrl = url("https://github.com/evolution-gaming/hashira"),
+  connection = "git@github.com:evolution-gaming/hashira.git",
+))
+
 // if changing binary Scala versions here, change in the ci.yml action as well
 ThisBuild / crossScalaVersions := Seq(scala213Version, scala33Version)
 ThisBuild / scalaVersion := crossScalaVersions.value.head

@@ -200,6 +200,8 @@ applied or pending.
 
 JDK 17 is required to build the project.
 
+### Useful SBT Commands
+
 To reformat code using scalafmt, run:
 
 ```shell
@@ -214,3 +216,34 @@ sbt build
 
 Cassandra driver tests use [Testcontainers](https://testcontainers.com), so Docker is required to
 run them.
+
+### Compatibility
+
+**DO NOT BREAK BINARY AND SOURCE COMPATIBILITY!**
+
+Binary compatibility is checked on every build automatically,
+but for the source compatibility you need to watch for it yourself.
+
+### How to Make a Release
+
+- Being on the up-to-date main branch, create a release tag:
+
+```shell
+git tag v1.2.3
+```
+
+- Push the tag:
+
+```shell
+git push origin v1.2.3
+```
+
+- This will trigger the release GitHub Action.
+  If it succeeds, the release ends up on Maven Central with GitHub release notes generated
+  automatically from PRs info.
+- If the release GitHub Action fails, the tag will be deleted on remote.
+  After deleting the tag locally, fix the main branch and do the process again:
+
+```shell
+git tag -d v1.2.3
+```
