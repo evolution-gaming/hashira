@@ -38,6 +38,8 @@ object Dependencies {
     val databind = "com.fasterxml.jackson.core" % "jackson-databind" % v
   }
 
+  lazy val guava = "com.google.guava" % "guava" % "33.7.2-jre"
+
   lazy val nettyHandler = "io.netty" % "netty-handler" % "4.1.139.Final"
 
   lazy val classgraph = "io.github.classgraph" % "classgraph" % "4.8.196"

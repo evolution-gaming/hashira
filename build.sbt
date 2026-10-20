@@ -142,6 +142,7 @@ lazy val cassandraDriver3 = project
       Dependencies.cassandraDriverV3,
       Jackson.databind,
       nettyHandler,
+      guava,
     ),
   )
 
