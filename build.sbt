@@ -144,6 +144,7 @@ lazy val cassandraDriver3 = project
       nettyHandler,
       guava,
     ),
+    versionPolicyIgnored += "com.google.guava" % "guava",
   )
 
 lazy val cassandraDriver4 = project
