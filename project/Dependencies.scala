@@ -27,10 +27,18 @@ object Dependencies {
   lazy val cassandraDriverV3 = "com.datastax.cassandra" % "cassandra-driver-core" % "3.11.5"
 
   object CassandraDriverV4 {
-    private val v = "4.19.3"
+    private val v = "4.19.4"
 
     val core = "org.apache.cassandra" % "java-driver-core" % v
   }
+
+  object Jackson {
+    private val v = "2.21.8"
+
+    val databind = "com.fasterxml.jackson.core" % "jackson-databind" % v
+  }
+
+  lazy val nettyHandler = "io.netty" % "netty-handler" % "4.1.139.Final"
 
   lazy val classgraph = "io.github.classgraph" % "classgraph" % "4.8.196"
 

@@ -140,6 +140,8 @@ lazy val cassandraDriver3 = project
   .settings(
     libraryDependencies ++= Seq(
       Dependencies.cassandraDriverV3,
+      Jackson.databind,
+      nettyHandler,
     ),
   )
 
@@ -158,6 +160,7 @@ lazy val cassandraDriver4 = project
   .settings(
     libraryDependencies ++= Seq(
       CassandraDriverV4.core,
+      Jackson.databind,
     ),
   )
 
