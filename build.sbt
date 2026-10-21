@@ -35,7 +35,12 @@ ThisBuild / scalaVersion := crossScalaVersions.value.head
 // WARNING: BinaryCompatible is used instead of BinaryAndSourceCompatible because BinaryAndSourceCompatible fails
 // on new methods added to objects, which doesn't really break neither source, nor binary compatibility.
 // So the source compatibility should be guaranteed manually.
-ThisBuild / versionPolicyIntention := Compatibility.BinaryCompatible
+// TODO: WIP change back to BinaryCompatible after 1.0.0 release
+ThisBuild / versionPolicyIntention := Compatibility.None
+
+// to fix dependabot alerts for dependencies on which we do not depend directly
+// https://github.com/evolution-gaming/hashira/security/dependabot
+ThisBuild / dependencyOverrides ++= SecurityAlertOverrides.dependencies
 
 addCommandAlias("fmt", "+all scalafmtRepo")
 addCommandAlias("build", "+all scalafmtCheckRepo versionPolicyCheck Compile/doc test")
@@ -88,8 +93,8 @@ lazy val root = project
   .aggregate(
     core,
     cassandraDriverSupportTck,
-    cassandraDriver3,
-    cassandraDriver4,
+    cassandraDriver3Support,
+    cassandraDriver4Support,
   )
 
 lazy val core = project
@@ -125,9 +130,9 @@ lazy val cassandraDriverSupportTck = project
     ),
   )
 
-lazy val cassandraDriver3 = project
+lazy val cassandraDriver3Support = project
   .configure(asPublishedModule(
-    name = "cassandra-driver3",
+    name = "cassandra-driver3-support",
     description = "Cassandra driver v3 support",
   ))
   .settings(
@@ -140,16 +145,12 @@ lazy val cassandraDriver3 = project
   .settings(
     libraryDependencies ++= Seq(
       Dependencies.cassandraDriverV3,
-      Jackson.databind,
-      nettyHandler,
-      guava,
     ),
-    versionPolicyIgnored += "com.google.guava" % "guava",
   )
 
-lazy val cassandraDriver4 = project
+lazy val cassandraDriver4Support = project
   .configure(asPublishedModule(
-    name = "cassandra-driver4",
+    name = "cassandra-driver4-support",
     description = "Cassandra driver v4 support",
   ))
   .settings(
@@ -162,7 +163,6 @@ lazy val cassandraDriver4 = project
   .settings(
     libraryDependencies ++= Seq(
       CassandraDriverV4.core,
-      Jackson.databind,
     ),
   )
 
