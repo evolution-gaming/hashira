@@ -46,14 +46,14 @@ Add dependencies matching your Cassandra driver version:
     ```scala
     libraryDependencies ++= Seq(
       "com.evolution.hashira" %% "core" % "LATEST_VERSION",
-      "com.evolution.hashira" %% "cassandra-driver4" % "LATEST_VERSION",
+      "com.evolution.hashira" %% "cassandra-driver4-support" % "LATEST_VERSION",
     )
     ```
 - Cassandra driver v3 - `com.datastax.cassandra:cassandra-driver-core`
     ```scala
     libraryDependencies ++= Seq(
       "com.evolution.hashira" %% "core" % "LATEST_VERSION",
-      "com.evolution.hashira" %% "cassandra-driver3" % "LATEST_VERSION",
+      "com.evolution.hashira" %% "cassandra-driver3-support" % "LATEST_VERSION",
     )
     ```
 

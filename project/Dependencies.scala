@@ -32,16 +32,7 @@ object Dependencies {
     val core = "org.apache.cassandra" % "java-driver-core" % v
   }
 
-  object Jackson {
-    private val v = "2.21.8"
-
-    val databind = "com.fasterxml.jackson.core" % "jackson-databind" % v
-  }
-
-  lazy val guava = "com.google.guava" % "guava" % "33.7.2-jre"
-
-  lazy val nettyHandler = "io.netty" % "netty-handler" % "4.1.139.Final"
-
+  // TODO: WIP migrate to 5.x: https://github.com/classgraph/classgraph/releases#release-classgraph-5.0.0
   lazy val classgraph = "io.github.classgraph" % "classgraph" % "4.8.196"
 
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
@@ -50,4 +41,19 @@ object Dependencies {
     // the driver is used only by the deprecated org.testcontainers.containers.CassandraContainer,
     // excluding it to keep driver 3 classes off the classpath of the tests for other drivers
     .exclude("com.datastax.cassandra", "cassandra-driver-core")
+
+  // https://github.com/evolution-gaming/hashira/security/dependabot
+  // Version overrides to fix dependabot alerts go here:
+  object SecurityAlertOverrides {
+    private val jacksonDatabind = "com.fasterxml.jackson.core" % "jackson-databind" % "2.21.8"
+    private val guava = "com.google.guava" % "guava" % "33.7.2-jre"
+    private val nettyHandler = "io.netty" % "netty-handler" % "4.1.139.Final"
+
+    val dependencies: Seq[ModuleID] = Seq(
+      jacksonDatabind,
+      guava,
+      nettyHandler,
+    )
+  }
+
 }
