@@ -2,7 +2,6 @@ package com.evolution.hashira
 
 import io.github.classgraph.{ClassGraph, Resource}
 
-import java.nio.ByteBuffer
 import java.nio.file.*
 import scala.collection.immutable.ArraySeq
 import scala.jdk.CollectionConverters.*
@@ -53,28 +52,27 @@ private[hashira] object FileUtils {
    * empty one.
    */
   def listClassPathDirFiles(
-    classLoader: ClassLoader,
     classPath: String,
     withExtension: String,
   ): ArraySeq[ClassPathFile] = {
     Using.resource {
       new ClassGraph()
-        .addClassLoader(classLoader)
+        .enableClasspath()
+        .enableNonSystemModules()
         .acceptPathsNonRecursive(classPath)
         .scan()
     } { scanResult =>
       val resultBuilder = ArraySeq.newBuilder[ClassPathFile]
 
       scanResult.getResourcesWithExtension(withExtension)
-        .forEachByteBufferThrowingIOException { (resource, contentByteBuf) =>
+        .forEachByteArray { (resource, contentBytes) =>
+          val path = resource.getPath
           resultBuilder += ClassPathFile(
-            // getClasspathElementFile can return null if the classpath element
-            // doesn't have a location, e.g. loaded from memory
-            classPathElementRef =
-              Option(resource.getClasspathElementFile).map(_.toString).getOrElse("UNKNOWN"),
-            pathUnderClassPathElement = resource.getPathRelativeToClasspathElement,
-            fileName = getFileName(resource),
-            contentBytes = copyToArray(contentByteBuf),
+            classPathElementRef = getClassPathElementRef(resource),
+            pathUnderClassPathElement = path,
+            // assuming paths inside classpath should be delimited with /
+            fileName = path.substring(path.lastIndexOf('/') + 1),
+            contentBytes = contentBytes,
           )
         }
 
@@ -82,15 +80,18 @@ private[hashira] object FileUtils {
     }
   }
 
-  private def getFileName(resource: Resource): String = {
-    // assuming paths inside classpath should be delimited with /
-    resource.getPathRelativeToClasspathElement.split('/').last
-  }
-
-  private def copyToArray(byteBuf: ByteBuffer): Array[Byte] = {
-    val result = new Array[Byte](byteBuf.remaining())
-    byteBuf.get(result)
-    result
+  private def getClassPathElementRef(resource: Resource): String = {
+    // unlike getClasspathElementFile, tells apart the elements inside the same JAR file,
+    // e.g. BOOT-INF/classes and BOOT-INF/lib/dep.jar in a Spring Boot one
+    try {
+      resource.getClasspathElementURI.toString
+    } catch {
+      // thrown by getClasspathElementURI if the classpath element doesn't have a location,
+      // e.g. a module defined in memory
+      case _: IllegalStateException =>
+        Option(resource.getModuleReference)
+          .fold("UNKNOWN")(module => s"module:${ module.descriptor.name }")
+    }
   }
 
   /**
@@ -98,7 +99,7 @@ private[hashira] object FileUtils {
    *
    * @param classPathElementRef
    *   string representation of the classpath element where the file resides, e.g. JAR
-   *   file path
+   *   file URI
    * @param pathUnderClassPathElement
    *   file path relative to the classpath element root
    * @param fileName
