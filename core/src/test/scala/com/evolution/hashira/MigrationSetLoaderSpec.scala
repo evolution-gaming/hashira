@@ -1,8 +1,10 @@
 package com.evolution.hashira
 
-import java.net.URLClassLoader
+import java.io.ByteArrayOutputStream
+import java.net.{URI, URL, URLClassLoader}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, NoSuchFileException, Path, Paths}
+import java.util.zip.{ZipEntry, ZipOutputStream}
 import scala.util.Using
 
 class MigrationSetLoaderSpec extends BaseUnitSpec {
@@ -104,48 +106,46 @@ class MigrationSetLoaderSpec extends BaseUnitSpec {
     "fromClasspath" - {
       def load(
         classPathDir: String,
-        classLoader: ClassLoader,
         name: Option[String] = None,
         params: MigratorParams = MigratorParams.Default,
       ): MigrationSet = {
         implicit val log: TestMigrationLog = new TestMigrationLog
         MigrationSetLoader
-          .fromClasspath(classPathDir = classPathDir, params = params, classLoader = classLoader)
+          .fromClasspath(classPathDir = classPathDir, params = params)
           .load(name = name)
       }
 
-      "loads the migration files in the file name order" in withClassPathRoot { (root, classLoader) =>
+      "loads the migration files in the file name order" in withClassPathRoot { root =>
         val dir = root.resolve(MigrationsClassPathDir)
         // sharing authoredAt, so the load order is the execution order
         val b = writeMigrationFile(dir, "02_second.cql", mkMigration(authoredAt = 1L, description = "b"))
         val a = writeMigrationFile(dir, "01_first.cql", mkMigration(authoredAt = 1L, description = "a"))
         val c = writeMigrationFile(dir, "03_third.cql", mkMigration(authoredAt = 1L, description = "c"))
 
-        load(MigrationsClassPathDir, classLoader) shouldEqual MigrationSet(Vector(a, b, c))
+        load(MigrationsClassPathDir) shouldEqual MigrationSet(Vector(a, b, c))
       }
 
       "loads only the files with the extension, not looking into subdirectories" in withClassPathRoot {
-        (root, classLoader) =>
+        root =>
           val dir = root.resolve(MigrationsClassPathDir)
           val migration = writeMigrationFile(dir, "a.cql", mkMigration(authoredAt = 1L, description = "a"))
           writeNonMigrationFiles(dir)
 
-          load(MigrationsClassPathDir, classLoader) shouldEqual MigrationSet(Vector(migration))
+          load(MigrationsClassPathDir) shouldEqual MigrationSet(Vector(migration))
       }
 
-      "uses the migration file extension from the params" in withClassPathRoot { (root, classLoader) =>
+      "uses the migration file extension from the params" in withClassPathRoot { root =>
         val dir = root.resolve(MigrationsClassPathDir)
         writeMigrationFile(dir, "a.cql", mkMigration(authoredAt = 1L, description = "a"))
         val txt = writeMigrationFile(dir, "b.txt", mkMigration(authoredAt = 2L, description = "b"))
 
         load(
           MigrationsClassPathDir,
-          classLoader,
           params = MigratorParams.Default.withMigrationFileExtension("txt"),
         ) shouldEqual MigrationSet(Vector(txt))
       }
 
-      "loads a named set from the subdirectory with that name" in withClassPathRoot { (root, classLoader) =>
+      "loads a named set from the subdirectory with that name" in withClassPathRoot { root =>
         val dir = root.resolve(MigrationsClassPathDir)
         writeMigrationFile(dir, "a.cql", mkMigration(authoredAt = 1L, description = "a"))
         val named = writeMigrationFile(
@@ -154,45 +154,37 @@ class MigrationSetLoaderSpec extends BaseUnitSpec {
           mkMigration(authoredAt = 2L, description = "b"),
         )
 
-        load(MigrationsClassPathDir, classLoader, name = Some("named")) shouldEqual
-          MigrationSet(Vector(named))
-        load(s"$MigrationsClassPathDir/", classLoader, name = Some("named")) shouldEqual
-          MigrationSet(Vector(named))
+        load(MigrationsClassPathDir, name = Some("named")) shouldEqual MigrationSet(Vector(named))
+        load(s"$MigrationsClassPathDir/", name = Some("named")) shouldEqual MigrationSet(Vector(named))
       }
 
       // Migrator fails on an empty set unless MigratorParams.allowEmptyMigrationSet is enabled
-      "returns an empty set for a missing classpath directory or set name" in withClassPathRoot {
-        (root, classLoader) =>
-          writeMigrationFile(
-            root.resolve(MigrationsClassPathDir),
-            "a.cql",
-            mkMigration(authoredAt = 1L, description = "a"),
-          )
+      "returns an empty set for a missing classpath directory or set name" in withClassPathRoot { root =>
+        writeMigrationFile(
+          root.resolve(MigrationsClassPathDir),
+          "a.cql",
+          mkMigration(authoredAt = 1L, description = "a"),
+        )
 
-          load(s"$MigrationsClassPathDir/missing", classLoader) shouldEqual MigrationSet.empty
-          load(MigrationsClassPathDir, classLoader, name = Some("missing")) shouldEqual MigrationSet.empty
+        load(s"$MigrationsClassPathDir/missing") shouldEqual MigrationSet.empty
+        load(MigrationsClassPathDir, name = Some("missing")) shouldEqual MigrationSet.empty
       }
 
-      "logs the classpath element the migration files are discovered in" in withClassPathRoot {
-        (root, classLoader) =>
-          writeMigrationFile(
-            root.resolve(MigrationsClassPathDir),
-            "a.cql",
-            mkMigration(authoredAt = 1L, description = "a"),
-          )
+      "logs the classpath element the migration files are discovered in" in withClassPathRoot { root =>
+        writeMigrationFile(
+          root.resolve(MigrationsClassPathDir),
+          "a.cql",
+          mkMigration(authoredAt = 1L, description = "a"),
+        )
 
-          implicit val log: TestMigrationLog = new TestMigrationLog
-          MigrationSetLoader
-            .fromClasspath(
-              classPathDir = MigrationsClassPathDir,
-              params = MigratorParams.Default,
-              classLoader,
-            )
-            .load(name = None)
+        implicit val log: TestMigrationLog = new TestMigrationLog
+        MigrationSetLoader
+          .fromClasspath(classPathDir = MigrationsClassPathDir, params = MigratorParams.Default)
+          .load(name = None)
 
-          log.infoMessages.toVector shouldEqual Vector(
-            s"discovered migration files in classpath: element=${ root.toRealPath() }, path=$MigrationsClassPathDir",
-          )
+        log.infoMessages.toVector shouldEqual Vector(
+          s"discovered migration files in classpath: element=${ root.toRealPath().toUri }, path=$MigrationsClassPathDir",
+        )
       }
 
       "fails if the migration files are found in several classpath elements" in withTmpDir { tempDir =>
@@ -209,34 +201,73 @@ class MigrationSetLoaderSpec extends BaseUnitSpec {
           mkMigration(authoredAt = 2L, description = "b"),
         )
 
-        withClassLoader(root1, root2) { classLoader =>
+        withClassPathRoots(root1, root2) {
           val e = interceptOnly[RuntimeException] {
-            load(MigrationsClassPathDir, classLoader)
+            load(MigrationsClassPathDir)
           }
           e.getMessage should
             include("found migration files for one classpath directory in several classpath elements")
-          e.getMessage should include(root1.toRealPath().toString)
-          e.getMessage should include(root2.toRealPath().toString)
+          e.getMessage should include(root1.toRealPath().toUri.toString)
+          e.getMessage should include(root2.toRealPath().toUri.toString)
         }
       }
 
-      "fails on an invalid migration file, referring to it by its classpath" in withClassPathRoot {
-        (root, classLoader) =>
-          val dir = root.resolve(MigrationsClassPathDir)
-          writeMigrationFile(dir, "a.cql", mkMigration(authoredAt = 1L, description = "a"))
-          writeFile(dir, "b.cql", "CREATE TABLE no_directives (id uuid PRIMARY KEY)")
+      "fails if the migration files are found in several elements of a Spring Boot JAR" in withTmpDir { dir =>
+        val depJar = jarBytes(
+          s"$MigrationsClassPathDir/b.cql" ->
+            migrationFileBytes(mkMigration(authoredAt = 2L, description = "b")),
+        )
+        val appJar = writeJar(
+          dir.resolve("app.jar"),
+          s"BOOT-INF/classes/$MigrationsClassPathDir/a.cql" ->
+            migrationFileBytes(mkMigration(authoredAt = 1L, description = "a")),
+          "BOOT-INF/lib/dep.jar" -> depJar,
+        )
 
-          interceptOnly[MigrationFileInvalidException] {
-            load(MigrationsClassPathDir, classLoader)
-          }.fileRef shouldEqual s"classpath://$MigrationsClassPathDir/b.cql"
+        withSpringBootClassPath(appJar, depJarNames = "dep.jar") {
+          val e = interceptOnly[RuntimeException] {
+            load(MigrationsClassPathDir)
+          }
+          e.getMessage should
+            include("found migration files for one classpath directory in several classpath elements")
+          e.getMessage should include("app.jar!/BOOT-INF/classes")
+          e.getMessage should include("app.jar!/BOOT-INF/lib/dep.jar")
+        }
       }
 
-      "loads the valid migration file format examples with the default class loader" in {
-        implicit val log: TestMigrationLog = new TestMigrationLog
+      "fails on an invalid migration file, referring to it by its classpath" in withClassPathRoot { root =>
+        val dir = root.resolve(MigrationsClassPathDir)
+        writeMigrationFile(dir, "a.cql", mkMigration(authoredAt = 1L, description = "a"))
+        writeFile(dir, "b.cql", "CREATE TABLE no_directives (id uuid PRIMARY KEY)")
 
-        MigrationSetLoader
-          .fromClasspath(classPathDir = ValidFileExamplesClassPathDir, params = MigratorParams.Default)
-          .load(name = None) shouldEqual validFileExamplesSet
+        interceptOnly[MigrationFileInvalidException] {
+          load(MigrationsClassPathDir)
+        }.fileRef shouldEqual s"classpath://$MigrationsClassPathDir/b.cql"
+      }
+
+      "refers to an invalid migration file in a Spring Boot JAR file by its classpath" in withTmpDir { dir =>
+        val appJar = writeJar(
+          dir.resolve("app.jar"),
+          s"BOOT-INF/classes/$MigrationsClassPathDir/b.cql" ->
+            "CREATE TABLE no_directives (id uuid PRIMARY KEY)".getBytes(StandardCharsets.UTF_8),
+        )
+
+        withSpringBootClassPath(appJar) {
+          interceptOnly[MigrationFileInvalidException] {
+            load(MigrationsClassPathDir)
+          }.fileRef shouldEqual s"classpath://$MigrationsClassPathDir/b.cql"
+        }
+      }
+
+      "loads the valid migration file format examples from the test resources" in {
+        load(ValidFileExamplesClassPathDir) shouldEqual validFileExamplesSet
+      }
+
+      // e.g. threads attached from native code
+      "loads the migration files without a thread context class loader" in {
+        withContextClassLoader(null) {
+          load(ValidFileExamplesClassPathDir) shouldEqual validFileExamplesSet
+        }
       }
     }
   }
@@ -252,8 +283,8 @@ class MigrationSetLoaderSpec extends BaseUnitSpec {
 object MigrationSetLoaderSpec {
 
   /**
-   * Classpath directory for the migration files of the tests using a custom class loader;
-   * nested to avoid clashing with the resources visible to the default class loaders.
+   * Classpath directory for the migration files the tests put on the classpath; nested to
+   * avoid clashing with the other resources there.
    */
   private val MigrationsClassPathDir: String = "hashira/migration_set_loader_spec/migrations"
 
@@ -275,16 +306,37 @@ object MigrationSetLoaderSpec {
     fileName: String,
     migration: Migration.Irreversible,
   ): Migration = {
-    writeFile(
-      dir,
-      fileName,
-      s"""-- description: ${ migration.id.description }
-         |-- authoredAt: ${ migration.id.authoredAt.epochMillis }
-         |-- up:
-         |${ migration.upStatements.mkString }
-         |""".stripMargin,
-    )
+    writeFile(dir, fileName, migrationFileContent(migration))
     migration
+  }
+
+  private def migrationFileContent(migration: Migration.Irreversible): String = {
+    s"""-- description: ${ migration.id.description }
+       |-- authoredAt: ${ migration.id.authoredAt.epochMillis }
+       |-- up:
+       |${ migration.upStatements.mkString }
+       |""".stripMargin
+  }
+
+  private def migrationFileBytes(migration: Migration.Irreversible): Array[Byte] = {
+    migrationFileContent(migration).getBytes(StandardCharsets.UTF_8)
+  }
+
+  private def jarBytes(entries: (String, Array[Byte])*): Array[Byte] = {
+    val bytesOut = new ByteArrayOutputStream()
+    Using.resource(new ZipOutputStream(bytesOut)) { zipOut =>
+      entries.foreach {
+        case (path, content) =>
+          zipOut.putNextEntry(new ZipEntry(path))
+          zipOut.write(content)
+          zipOut.closeEntry()
+      }
+    }
+    bytesOut.toByteArray
+  }
+
+  private def writeJar(path: Path, entries: (String, Array[Byte])*): Path = {
+    Files.write(path, jarBytes(entries*))
   }
 
   /**
@@ -315,13 +367,44 @@ object MigrationSetLoaderSpec {
     }
   }
 
-  private def withClassLoader[A](roots: Path*)(body: ClassLoader => A): A = {
-    Using.resource(new URLClassLoader(roots.map(_.toUri.toURL).toArray, null))(body)
+  /**
+   * Puts the URLs on the classpath found in the environment, using a thread context class
+   * loader that is a child of the one that loaded the tests, like sbt, Play dev mode or
+   * servlet containers do for the application code.
+   */
+  private def withClassPath[A](urls: Seq[URL])(body: => A): A = {
+    Using.resource(new URLClassLoader(urls.toArray, getClass.getClassLoader)) { classLoader =>
+      withContextClassLoader(classLoader)(body)
+    }
   }
 
-  private def withClassPathRoot[A](body: (Path, ClassLoader) => A): A = {
-    withTmpDir { root =>
-      withClassLoader(root)(classLoader => body(root, classLoader))
+  private def withClassPathRoots[A](roots: Path*)(body: => A): A = {
+    withClassPath(roots.map(_.toUri.toURL))(body)
+  }
+
+  private def withClassPathRoot[A](body: Path => A): A = {
+    withTmpDir(root => withClassPathRoots(root)(body(root)))
+  }
+
+  /**
+   * Puts a Spring Boot JAR file on the classpath, as its launcher sets it up: the classes
+   * directory and the dependency JAR files nested in the JAR file.
+   */
+  private def withSpringBootClassPath[A](appJar: Path, depJarNames: String*)(body: => A): A = {
+    val appJarUri = appJar.toRealPath().toUri
+    val urls = ("BOOT-INF/classes" +: depJarNames.map(name => s"BOOT-INF/lib/$name"))
+      .map(nestedPath => URI.create(s"jar:$appJarUri!/$nestedPath!/").toURL)
+    withClassPath(urls)(body)
+  }
+
+  private def withContextClassLoader[A](classLoader: ClassLoader)(body: => A): A = {
+    val thread = Thread.currentThread()
+    val prevClassLoader = thread.getContextClassLoader
+    thread.setContextClassLoader(classLoader)
+    try {
+      body
+    } finally {
+      thread.setContextClassLoader(prevClassLoader)
     }
   }
 }

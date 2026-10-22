@@ -5,7 +5,7 @@ object Dependencies {
   lazy val scala33Version = "3.3.8" // Scala 3 LTS
 
   object Slf4j {
-    private val v = "2.0.19"
+    private val v = "2.0.20"
 
     val api = "org.slf4j" % "slf4j-api" % v
     val simple = "org.slf4j" % "slf4j-simple" % v
@@ -32,8 +32,9 @@ object Dependencies {
     val core = "org.apache.cassandra" % "java-driver-core" % v
   }
 
-  // TODO: WIP migrate to 5.x: https://github.com/classgraph/classgraph/releases#release-classgraph-5.0.0
-  lazy val classgraph = "io.github.classgraph" % "classgraph" % "4.8.196"
+  // https://github.com/classgraph/classgraph/releases#release-classgraph-5.0.0
+  // migrate to 6.x when we move to JDK 25 LTS
+  lazy val classgraph = "io.github.classgraph" % "classgraph" % "5.0.0"
 
   lazy val typesafeConfig = "com.typesafe" % "config" % "1.4.9"
 

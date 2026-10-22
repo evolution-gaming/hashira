@@ -77,22 +77,16 @@ object MigrationSetLoader {
    *   base classpath directory path
    * @param params
    *   see [[MigratorParams]]
-   * @param classLoader
-   *   class loader used to find classpath resources; defaults to the one that loaded this
-   *   library; pass a different one if the migrations are only visible to another class
-   *   loader.
    */
   def fromClasspath(
     classPathDir: String,
     params: MigratorParams,
-    classLoader: ClassLoader = this.getClass.getClassLoader,
   ): MigrationSetLoader = new MigrationSetLoader {
     override def load(name: Option[String])(implicit log: MigrationLog): MigrationSet = {
       val effectiveClassPathDir = (Vector(classPathDir.stripSuffix("/")) ++ name).mkString("/")
       loadFromClassPathDir(
         classPath = effectiveClassPathDir,
         fileExtension = params.migrationFileExtension,
-        classLoader = classLoader,
       )
     }
   }
@@ -133,12 +127,10 @@ object MigrationSetLoader {
   private def loadFromClassPathDir(
     classPath: String,
     fileExtension: String,
-    classLoader: ClassLoader,
   )(implicit
     log: MigrationLog,
   ): MigrationSet = {
     val classPathFiles = FileUtils.listClassPathDirFiles(
-      classLoader = classLoader,
       classPath = classPath,
       withExtension = fileExtension,
     ).sortBy(_.fileName) // defines migration set load order - by file name
