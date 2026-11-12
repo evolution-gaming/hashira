@@ -135,16 +135,16 @@ A temporary keyspace-scoped session is opened for each run. If you already have 
 `MigratorParams` can be built with `withXxx` methods, or read from Typesafe Config with
 `MigratorParams.readFromConfig(config)`:
 
-| Parameter                               | Default              | Description                                                                                                                                                               |
-|-----------------------------------------|----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `appliedMigrationsTable`                | `applied_migrations` | applied migrations table name, in the migrated keyspace                                                                                                                   |
-| `consistencyLevel`                      | `QUORUM`             | consistency level of all the statements                                                                                                                                   |
-| `createAppliedMigrationsTableIfMissing` | `true`               | create the applied migrations table if it doesn't exist                                                                                                                   |
-| `ignoreMissingMigrations`               | `false`              | log, instead of failing on, applied migrations missing in set                                                                                                             |
-| `allowEmptyMigrationSet`                | `false`              | don't fail on an empty migration set                                                                                                                                      |
-| `migrationFileExtension`                | `cql`                | migration file extension filter                                                                                                                                           |
-| `runStatementsOnFirstNode` ¹            | `true`               | route all CQL statements to the first node in the session metadata, bypassing load balancing; reduces schema disagreement on multi-node clusters                          |
-| `schemaAgreementMode` ¹                 | `fail`               | check schema agreement after each DDL statement: `disabled` (skip), `warn` (log a warning if nodes disagree or the check timed out), `fail` (throw an error in that case) |
+| Parameter                               | Default              | Description                                                                                                                                                                                    |
+|-----------------------------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `appliedMigrationsTable`                | `applied_migrations` | applied migrations table name, in the migrated keyspace                                                                                                                                        |
+| `consistencyLevel`                      | `QUORUM`             | consistency level of all the statements                                                                                                                                                        |
+| `createAppliedMigrationsTableIfMissing` | `true`               | create the applied migrations table if it doesn't exist                                                                                                                                        |
+| `ignoreMissingMigrations`               | `false`              | log, instead of failing on, applied migrations missing in set                                                                                                                                  |
+| `allowEmptyMigrationSet`                | `false`              | don't fail on an empty migration set                                                                                                                                                           |
+| `migrationFileExtension`                | `cql`                | migration file extension filter                                                                                                                                                                |
+| `runStatementsOnFirstNode` ¹            | `true`               | route all CQL statements to the first UP node in the session metadata (preferring LOCAL nodes over REMOTE nodes), bypassing load balancing; reduces schema disagreement on multi-node clusters |
+| `schemaAgreementMode` ¹                 | `fail`               | check schema agreement after each DDL statement: `disabled` (skip), `warn` (log a warning if nodes disagree or the check timed out), `fail` (throw an error in that case)                      |
 
 ¹ Supported by Cassandra driver v4 only.
 

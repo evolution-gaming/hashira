@@ -2,7 +2,9 @@ package com.evolution.hashira.driver4
 
 import com.datastax.oss.driver.api.core.*
 import com.datastax.oss.driver.api.core.cql.*
+import com.datastax.oss.driver.api.core.loadbalancing.NodeDistance
 import com.datastax.oss.driver.api.core.metadata.Node
+import com.datastax.oss.driver.api.core.metadata.NodeState
 import com.evolution.hashira.*
 import com.evolution.hashira.MigratorDriverSupport.*
 
@@ -29,9 +31,11 @@ final class Driver4CqlRunner(
   )
 
   private lazy val firstNode: Option[Node] =
-    if (runStatementsOnFirstNode)
-      session.getMetadata.getNodes.values.asScala.headOption
-    else
+    if (runStatementsOnFirstNode) {
+      val upNodes = session.getMetadata.getNodes.values.asScala.filter(n => n.getState == NodeState.UP)
+      upNodes.find(_.getDistance == NodeDistance.LOCAL).orElse(upNodes.find(_.getDistance ==
+        NodeDistance.REMOTE))
+    } else
       None
 
   override def close(): Unit = ()
@@ -79,7 +83,7 @@ final class Driver4CqlRunner(
       .setPageSize(Int.MaxValue) // disable paging
     if (runStatementsOnFirstNode)
       builder.setNode(
-        firstNode.getOrElse(sys.error("runStatementsOnFirstNode is enabled but the session metadata contains no nodes")),
+        firstNode.getOrElse(sys.error("runStatementsOnFirstNode is enabled but the session metadata contains no UP nodes")),
       )
     else builder
   }
