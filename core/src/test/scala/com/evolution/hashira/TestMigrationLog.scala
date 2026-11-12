@@ -9,8 +9,13 @@ import scala.collection.mutable
  */
 final class TestMigrationLog extends MigrationLog {
   val infoMessages: mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty
+  val warnMessages: mutable.ArrayBuffer[String] = mutable.ArrayBuffer.empty
 
   override def info(msg: => String): Unit = {
     infoMessages += msg
+  }
+
+  override def warn(msg: => String): Unit = {
+    warnMessages += msg
   }
 }

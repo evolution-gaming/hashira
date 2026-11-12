@@ -25,8 +25,16 @@ trait MigratorDriverSupport[C] {
    *   keyspace name to perform migration against
    * @param params
    *   see [[MigratorParams]]
+   * @param log
+   *   see [[MigrationLog]]
    */
-  def makeRunner(driverClient: C, keyspace: String, params: MigratorParams): MigratorDriverSupport.CqlRunner
+  def makeRunner(
+    driverClient: C,
+    keyspace: String,
+    params: MigratorParams,
+  )(implicit
+    log: MigrationLog,
+  ): MigratorDriverSupport.CqlRunner
 }
 
 object MigratorDriverSupport {
@@ -46,8 +54,14 @@ object MigratorDriverSupport {
    *     instance is run more than once, the runner must stay usable after `close()`
    */
   implicit def cqlRunnerDriverSupportInstance[R <: CqlRunner]: MigratorDriverSupport[R] =
-    (driverClient: R, _: String, _: MigratorParams) => {
-      driverClient
+    new MigratorDriverSupport[R] {
+      override def makeRunner(
+        driverClient: R,
+        keyspace: String,
+        params: MigratorParams,
+      )(implicit
+        log: MigrationLog,
+      ): CqlRunner = driverClient
     }
 
   /**
