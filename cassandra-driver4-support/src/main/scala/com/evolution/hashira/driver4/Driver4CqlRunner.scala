@@ -2,6 +2,9 @@ package com.evolution.hashira.driver4
 
 import com.datastax.oss.driver.api.core.*
 import com.datastax.oss.driver.api.core.cql.*
+import com.datastax.oss.driver.api.core.loadbalancing.NodeDistance
+import com.datastax.oss.driver.api.core.metadata.Node
+import com.datastax.oss.driver.api.core.metadata.NodeState
 import com.evolution.hashira.*
 import com.evolution.hashira.MigratorDriverSupport.*
 
@@ -17,21 +20,33 @@ final class Driver4CqlRunner(
   keyspace: String,
   appliedMigrationsTable: String,
   consistencyLevel: ConsistencyLevel,
+  runStatementsOnFirstNode: Boolean,
+  schemaAgreementMode: SchemaAgreementMode,
+)(implicit
+  log: MigrationLog,
 ) extends MigratorDriverSupport.CqlRunner {
 
   private val appliedMigrationsStatements = new AppliedMigrationsCql.Statements(
     appliedMigrationsTable = appliedMigrationsTable,
   )
 
+  private lazy val firstNode: Option[Node] =
+    if (runStatementsOnFirstNode) {
+      val upNodes = session.getMetadata.getNodes.values.asScala.filter(n => n.getState == NodeState.UP)
+      upNodes.find(_.getDistance == NodeDistance.LOCAL).orElse(upNodes.find(_.getDistance ==
+        NodeDistance.REMOTE))
+    } else
+      None
+
   override def close(): Unit = ()
 
   override def createMigrationsTableIfNotExists(): Unit = {
-    runPlainStatement(appliedMigrationsStatements.CreateTableIfNotExists)
+    runDdlStatement(appliedMigrationsStatements.CreateTableIfNotExists)
     ()
   }
 
   override def runMigrationStatement(cql: String): Unit = {
-    runPlainStatement(cql)
+    runDdlStatement(cql)
     ()
   }
 
@@ -62,16 +77,47 @@ final class Driver4CqlRunner(
   }
 
   private def prebuildStatement(cql: String): SimpleStatementBuilder = {
-    SimpleStatement.builder(cql)
+    val builder = SimpleStatement.builder(cql)
       .setKeyspace(keyspace)
       .setConsistencyLevel(consistencyLevel)
       .setPageSize(Int.MaxValue) // disable paging
+    if (runStatementsOnFirstNode)
+      builder.setNode(
+        firstNode.getOrElse(sys.error("runStatementsOnFirstNode is enabled but the session metadata contains no UP nodes")),
+      )
+    else builder
   }
 
   private def runPlainStatement(cql: String): ResultSet = {
     val statement = prebuildStatement(cql).build()
     session.execute(statement)
   }
+
+  private def runDdlStatement(cql: String): ResultSet = {
+    val rs = runPlainStatement(cql)
+    doCheckSchemaAgreement()
+    rs
+  }
+
+  private def doCheckSchemaAgreement(): Unit = {
+    schemaAgreementMode match {
+      case SchemaAgreementMode.Disabled => ()
+      case mode =>
+        val agreed = session.checkSchemaAgreement()
+        if (!agreed) {
+          mode match {
+            case SchemaAgreementMode.Warn =>
+              log.warn(schemaAgreementError)
+            case SchemaAgreementMode.Fail =>
+              sys.error(schemaAgreementError)
+            case SchemaAgreementMode.Disabled => ()
+          }
+        }
+    }
+  }
+
+  private val schemaAgreementError =
+    "Schema agreement check failed or timed out after DDL statement: not all nodes agree on the schema"
 
   private def parseAppliedMigration(row: Row): MigrationId = {
     import AppliedMigrationsCql.Columns

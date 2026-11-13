@@ -18,6 +18,7 @@ package object driver3 {
       driverClient: Cluster,
       keyspace: String,
       params: MigratorParams,
+    )(implicit migrationLog: MigrationLog,
     ): MigratorDriverSupport.CqlRunner = {
       makeCqlRunner(cluster = driverClient, keyspace = keyspace, params = params)
     }

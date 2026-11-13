@@ -13,6 +13,8 @@ class MigratorParamsSpec extends BaseUnitSpec {
       params.createAppliedMigrationsTableIfMissing shouldEqual true
       params.migrationFileExtension shouldEqual "cql"
       params.allowEmptyMigrationSet shouldEqual false
+      params.runStatementsOnFirstNode shouldEqual true
+      params.schemaAgreementMode shouldEqual "fail"
 
       MigratorParams() should be theSameInstanceAs MigratorParams.Default
     }
@@ -25,6 +27,8 @@ class MigratorParamsSpec extends BaseUnitSpec {
         .withCreateAppliedMigrationsTableIfMissing(false)
         .withMigrationFileExtension("txt")
         .withAllowEmptyMigrationSet(true)
+        .withRunStatementsOnFirstNode(false)
+        .withSchemaAgreementMode("warn")
 
       params.appliedMigrationsTable shouldEqual "custom_table"
       params.consistencyLevel shouldEqual "ONE"
@@ -32,6 +36,8 @@ class MigratorParamsSpec extends BaseUnitSpec {
       params.createAppliedMigrationsTableIfMissing shouldEqual false
       params.migrationFileExtension shouldEqual "txt"
       params.allowEmptyMigrationSet shouldEqual true
+      params.runStatementsOnFirstNode shouldEqual false
+      params.schemaAgreementMode shouldEqual "warn"
 
       MigratorParams.Default.withConsistencyLevel("ONE").appliedMigrationsTable shouldEqual
         "applied_migrations"
@@ -58,7 +64,9 @@ class MigratorParamsSpec extends BaseUnitSpec {
         "ignoreMissingMigrations = false, " +
         "createAppliedMigrationsTableIfMissing = true, " +
         "migrationFileExtension = \"cql\", " +
-        "allowEmptyMigrationSet = false" +
+        "allowEmptyMigrationSet = false, " +
+        "runStatementsOnFirstNode = true, " +
+        "schemaAgreementMode = \"fail\"" +
         ")"
     }
 
@@ -76,7 +84,9 @@ class MigratorParamsSpec extends BaseUnitSpec {
           |- ignoreMissingMigrations = false
           |- createAppliedMigrationsTableIfMissing = true
           |- migrationFileExtension = "cql"
-          |- allowEmptyMigrationSet = false""".stripMargin
+          |- allowEmptyMigrationSet = false
+          |- runStatementsOnFirstNode = true
+          |- schemaAgreementMode = "fail"""".stripMargin
     }
 
     "should quote and escape strings in renderMultiline" in {
@@ -93,6 +103,8 @@ class MigratorParamsSpec extends BaseUnitSpec {
         .withCreateAppliedMigrationsTableIfMissing(false)
         .withMigrationFileExtension("txt")
         .withAllowEmptyMigrationSet(true)
+        .withRunStatementsOnFirstNode(false)
+        .withSchemaAgreementMode("warn")
 
       def read(hocon: String): MigratorParams = {
         MigratorParams.readFromConfig(ConfigFactory.parseString(hocon))
@@ -110,6 +122,8 @@ class MigratorParamsSpec extends BaseUnitSpec {
             |createAppliedMigrationsTableIfMissing = false
             |migrationFileExtension = txt
             |allowEmptyMigrationSet = true
+            |runStatementsOnFirstNode = false
+            |schemaAgreementMode = warn
             |""".stripMargin,
         ) shouldEqual customParams
       }
@@ -122,6 +136,8 @@ class MigratorParamsSpec extends BaseUnitSpec {
             |create-applied-migrations-table-if-missing = false
             |migration-file-extension = txt
             |allow-empty-migration-set = true
+            |run-statements-on-first-node = false
+            |schema-agreement-mode = warn
             |""".stripMargin,
         ) shouldEqual customParams
       }

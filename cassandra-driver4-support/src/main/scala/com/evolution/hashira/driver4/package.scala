@@ -12,6 +12,8 @@ package object driver4 {
       driverClient: CqlSession,
       keyspace: String,
       params: MigratorParams,
+    )(implicit
+      log: MigrationLog,
     ): MigratorDriverSupport.CqlRunner = {
       makeCqlRunner(session = driverClient, keyspace = keyspace, params = params)
     }
@@ -23,12 +25,20 @@ package object driver4 {
    * See [[MigratorDriverSupport.makeRunner()]] for the information about guarantees
    * method arguments.
    */
-  def makeCqlRunner(session: CqlSession, keyspace: String, params: MigratorParams): Driver4CqlRunner = {
+  def makeCqlRunner(
+    session: CqlSession,
+    keyspace: String,
+    params: MigratorParams,
+  )(implicit
+    log: MigrationLog,
+  ): Driver4CqlRunner = {
     new Driver4CqlRunner(
       session = session,
       keyspace = keyspace,
       appliedMigrationsTable = params.appliedMigrationsTable,
       consistencyLevel = DefaultConsistencyLevel.valueOf(params.consistencyLevel),
+      runStatementsOnFirstNode = params.runStatementsOnFirstNode,
+      schemaAgreementMode = SchemaAgreementMode.fromString(params.schemaAgreementMode),
     )
   }
 }

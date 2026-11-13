@@ -400,7 +400,7 @@ extends AnyFreeSpec with Matchers with BeforeAndAfterAll {
         driverClient = requireClient(),
         keyspace = keyspace,
         params = params,
-      ),
+      )(using NoOpLog),
     )(f)
   }
 
@@ -493,4 +493,9 @@ object BaseMigratorDriverSupportTckSpec {
     client: C,
     testClient: TestClient,
   )
+
+  private object NoOpLog extends MigrationLog {
+    override def info(msg: => String): Unit = ()
+    override def warn(msg: => String): Unit = ()
+  }
 }

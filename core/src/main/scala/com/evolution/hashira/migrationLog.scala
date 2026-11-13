@@ -24,6 +24,14 @@ trait MigrationLog {
    *   event message
    */
   def info(msg: => String): Unit
+
+  /**
+   * Logs a warning event raised during a migration run.
+   *
+   * @param msg
+   *   event message
+   */
+  def warn(msg: => String): Unit
 }
 
 object MigrationLog {
@@ -91,5 +99,9 @@ class DefaultMigrationLog(
 
   override def info(msg: => String): Unit = {
     logger.info(s"$messagePrefix$msg")
+  }
+
+  override def warn(msg: => String): Unit = {
+    logger.warn(s"$messagePrefix$msg")
   }
 }
