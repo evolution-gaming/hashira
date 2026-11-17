@@ -100,12 +100,36 @@ val migrator = Migrator.make(
   params = params,
 )
 
-// applies all the pending migrations from the "db/migrations" classpath directory
-migrator.run(migrationSetName = None, keyspace = "my_keyspace")
+// speeds up DDL statements, see the note on schema metadata below
+session.setSchemaMetadataEnabled(false)
+try {
+  // applies all the pending migrations from the "db/migrations" classpath directory
+  migrator.run(migrationSetName = None, keyspace = "my_keyspace")
+} finally {
+  // restores the configured value, waiting for the schema metadata refresh it triggers
+  session.setSchemaMetadataEnabled(null).toCompletableFuture.join()
+}
 ```
 
 The session is not closed by Hashira. Statements are keyspace-scoped per request, which requires
 native protocol v5 (Cassandra 4.0+).
+
+The example disables schema metadata for the run because, while it's enabled, each DDL statement
+completes only after a schema metadata refresh, which the driver delays by a debounce window
+(`advanced.metadata.schema.debouncer.window`, 1 second by default). See
+[Enabling/disabling](https://apache.github.io/cassandra-java-driver/4.19.0/core/metadata/schema/#enablingdisabling)
+in the driver docs. Keep in mind that:
+
+- The setting applies to the whole session, not just the run. Other users of the session see the
+  schema metadata as it was when it got disabled, and among concurrent runs on the same session,
+  the first one to finish re-enables it for the rest.
+- `setSchemaMetadataEnabled(null)` restores the configured value, while `true` would override the
+  configuration for good. When it re-enables schema metadata, the returned `CompletionStage`
+  completes after a full refresh. Wait for it before relying on the session's metadata, e.g. to
+  find the migrated tables.
+- While schema metadata is disabled, the driver doesn't wait for schema agreement after DDL
+  statements, so leave Hashira's own check on: keep `schemaAgreementMode` at `fail` (the default)
+  or `warn`, not `disabled`.
 
 ### Running Migrations with Cassandra Driver v3
 
