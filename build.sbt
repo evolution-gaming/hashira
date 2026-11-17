@@ -35,8 +35,7 @@ ThisBuild / scalaVersion := crossScalaVersions.value.head
 // WARNING: BinaryCompatible is used instead of BinaryAndSourceCompatible because BinaryAndSourceCompatible fails
 // on new methods added to objects, which doesn't really break neither source, nor binary compatibility.
 // So the source compatibility should be guaranteed manually.
-// TODO: WIP change back to BinaryCompatible after 1.0.0 release
-ThisBuild / versionPolicyIntention := Compatibility.None
+ThisBuild / versionPolicyIntention := Compatibility.BinaryCompatible
 
 // to fix dependabot alerts for dependencies on which we do not depend directly
 // https://github.com/evolution-gaming/hashira/security/dependabot
