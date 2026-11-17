@@ -40,6 +40,11 @@ ThisBuild / versionPolicyIntention := Compatibility.BinaryCompatible
 // to fix dependabot alerts for dependencies on which we do not depend directly
 // https://github.com/evolution-gaming/hashira/security/dependabot
 ThisBuild / dependencyOverrides ++= SecurityAlertOverrides.dependencies
+ThisBuild / versionPolicyIgnored ++= Seq(
+  // guava is bumped only via SecurityAlertOverrides (dependencyOverrides), which doesn't reach the published POM,
+  // so sbt-version-policy compares guava 19.0 from the previous release POM with the build-local override
+  "com.google.guava" % "guava",
+)
 
 addCommandAlias("fmt", "+all scalafmtRepo")
 addCommandAlias("build", "+all scalafmtCheckRepo versionPolicyCheck Compile/doc test")
